@@ -41,30 +41,43 @@ else am start -a android.intent.action.VIEW -d "$URL" >/dev/null 2>&1 || true
 fi
 
 echo
-echo "────────────────────────────────────────"
-echo "  NOVA Access Control (Discord ID Gate) "
-echo "────────────────────────────────────────"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo " NOVA Access Control (Discord ID Gate)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 read -r -p "Type or paste your Discord User ID: " DID
-DID=$(printf "%s" "$DID" | tr -cd '0-9')
-if [ -z "$DID" ] || [ ${#DID} -lt 17 ] || [ ${#DID} -gt 19 ]; then
+# alisin ang spaces/newlines just in case
+DID="$(printf '%s' "$DID" | tr -d '[:space:]')"
+
+# basic validation: 17–20 numeric digits lang
+if ! [[ "$DID" =~ ^[0-9]{17,20}$ ]]; then
   echo "❌ Invalid Discord ID."
-  pkill -F .nova_server.pid >/dev/null 2>&1 || pkill -f "http.server 8000" >/dev/null 2>&1 || true
+  # kung may sinimulang local server, patayin nang tahimik
+  pkill -f 'http.server 8000' >/dev/null 2>&1 || true
   exit 1
 fi
 
-# Whitelist ng Discord User IDs
-# (linisin muna input para walang hidden chars)
-DID="$(echo "$DID" | tr -cd '0-9')"
+# === Whitelist of Discord User IDs ===
+WHITELIST=(
+  693492070655983656
+  332738729250914305
+  1215179269215363072
+)
 
-case "$DID" in
-  6934920706559838656|332738729529014305|1215179269215363072)
-    echo "✅ Authorized. Access granted."
-    printf "DISCORD_ID=%s\n" "$DID" > "$APP_DIR/.authorized"
-    ;;
-  *)
-    echo "❌ Not authorized. Closing app..."
-    pkill -f .nova_server.pid >/dev/null 2>&1 || true
-    pkill -f "http.server 8000" >/dev/null 2>&1 || true
-    exit 1
-    ;;
-esac
+# check membership
+allowed=0
+for ID in "${WHITELIST[@]}"; do
+  if [[ "$DID" == "$ID" ]]; then
+    allowed=1
+    break
+  fi
+done
+
+if (( allowed )); then
+  echo "✅ Authorized. Access granted."
+  # optional: mark as authorized para next run hindi na magtanong
+  printf "%s\n" "$DID" > "$APP_DIR/.authorized" 2>/dev/null || true
+else
+  echo "⛔ Not authorized. Closing app..."
+  pkill -f 'http.server 8000' >/dev/null 2>&1 || true
+  exit 1
+fi
