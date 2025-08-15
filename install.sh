@@ -52,16 +52,23 @@ if [ -z "$DID" ] || [ ${#DID} -lt 17 ] || [ ${#DID} -gt 19 ]; then
   exit 1
 fi
 
-# Palitan mo ito ng totoong whitelist IDs mo
-WH="111111111111111111,222222222222222222,333333333333333333"
-case ",$WH," in
-  ,"$DID",)
-    echo "✅ Authorized. Access granted."
-    printf 'DISCORD_ID="%s"\n' "$DID" > "$APP_DIR/.authorized"
-    ;;
-  *)
-    echo "⛔ Not authorized. Closing app…"
-    pkill -F .nova_server.pid >/dev/null 2>&1 || pkill -f "http.server 8000" >/dev/null 2>&1 || true
-    exit 1
-    ;;
+# Whitelist ng Discord User IDs
+WH="
+693492070655983656
+332738729250914305
+333333333333333333
+
+"
+
+case "$WH" in
+    "$DID")
+        echo "✅ Authorized. Access granted."
+        printf "DISCORD_ID=%s\n" "$DID" > "$APP_DIR/.authorized"
+        ;;
+    *)
+        echo "❌ Not authorized. Closing app..."
+        pkill -F .nova_server.pid >/dev/null 2>&1 || true
+        pkill -f "http.server 8000" >/dev/null 2>&1 || true
+        exit 1
+        ;;
 esac
